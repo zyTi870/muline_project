@@ -1,0 +1,110 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    margin: 0;
+    padding: 0;
+}
+
+header {
+    background-color: #4CAF50;
+    color: white;
+    text-align: center;
+    padding: 20px;
+}
+
+h1 {
+    font-size: 36px;
+}
+
+section {
+    padding: 20px;
+    margin: 10px;
+    background-color: #fff;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+h2 {
+    color: #4CAF50;
+    border-bottom: 2px solid #eee; /* 增加分隔线 */
+    padding-bottom: 10px;
+}
+
+h3 {
+    color: #333;
+    margin-top: 20px;
+    border-left: 5px solid #4CAF50; /* 增加左侧修饰 */
+    padding-left: 10px;
+}
+
+h4, h5 { /* 增加对 h4, h5 的样式定义 */
+    color: #555;
+    margin-top: 15px;
+}
+
+pre {
+    background-color: #f1f1f1;
+    padding: 15px; /* 增加内边距 */
+    border-radius: 5px;
+    overflow-x: auto;
+    border: 1px dashed #ccc; /* 增加虚线边框 */
+}
+
+code {
+    font-family: 'Courier New', Courier, monospace;
+    color: #d6336c;
+}
+
+img {
+    display: block;
+    margin: 20px auto;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15); /* 增加图片阴影 */
+    max-width: 100%; /* 确保图片不会溢出容器 */
+    height: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+}
+
+table, th, td {
+    border: 1px solid #ddd;
+}
+
+th, td {
+    padding: 12px;
+    text-align: left;
+}
+
+th {
+    background-color: #f2f2f2;
+    color: #333;
+}
+
+tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+a {
+    color: #4CAF50;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+footer {
+    text-align: center;
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px;
+    /* 移除 position: fixed; 以防止遮挡内容 */
+    /* position: fixed; */
+    width: 100%;
+    bottom: 0;
+    margin-top: 30px;
+}

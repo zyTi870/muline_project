@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>实验报告 - Linux多线程与实时图像处理</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <header>
+        <h1>Linux多线程与实时图像处理实验报告</h1>
+    </header>
+
+    <section id="section1">
+        <h2>一、 实验目的 (Linux多线程)</h2>
+        <ul>
+            <li><strong>理解机制：</strong>理解 Linux 多线程（pthreads）的运行机制与原理。</li>
+            <li><strong>API掌握：</strong>掌握 <code>pthread_create</code>、<code>pthread_join</code> 等基本 API 的使用。</li>
+            <li><strong>竞态条件：</strong>深入理解多线程环境下的资源竞争（Race Condition）现象。</li>
+            <li><strong>同步互斥：</strong>掌握使用互斥锁（Mutex）解决线程同步与互斥问题的方法。</li>
+        </ul>
+    </section>
+
+    <section id="section2">
+        <h2>二、 实验内容与步骤</h2>
+
+        <h3>2.1 基础多线程程序运行与观察</h3>
+        <p>编写基础的多线程测试代码 <code>task1_base.c</code>。主线程创建一个子线程，双方各自循环打印信息并休眠 1 秒。</p>
+        <ul>
+            <li>主线程循环打印 "This is the main process."。</li>
+            <li>子线程循环打印 "This is a pthread."。</li>
+            <li>使用 <code>sleep(1)</code> 模拟耗时操作并观察 CPU 时间片的切换。</li>
+        </ul>
+        <p><strong>结果分析：</strong><br>
+        运行程序后发现，主线程和子线程的输出是交替进行的。这是因为 Linux 调度器在两个线程之间进行上下文切换。由于加了 sleep(1)，观察到的顺序比较规律；若去掉延时，输出顺序将取决于操作系统的调度策略，具有一定的不确定性。</p>
+        <img src="web/Weixin Image_20251229203703.png" alt="task1运行结果截图" width="600px" />
+
+        <hr>
+
+        <h3>2.2 高频循环下的线程乱序观察</h3>
+        <p><strong>步骤：</strong>编写代码 <code>task2_loop.c</code>，将循环次数增加到 1000 次，且不加延时，让两个线程全速运行，打印各自的计数值。</p>
+        <p><strong>结果分析：</strong><br>
+        在没有 sleep 且循环次数较多的情况下，终端输出呈现明显的“乱序”或“块状”交替。有时主线程连续输出几十行，然后子线程连续输出。这是因为每个线程分配到的 CPU 时间片（Time Slice）内可以执行多次 printf，当时间片耗尽发生调度时，才会切换到另一个线程。</p>
+
+        <hr>
+
+        <h3>2.3 竞态条件（Race Condition）模拟</h3>
+        <p><strong>步骤：</strong>编写程序 <code>task3_race.c</code>，创建两个线程同时对全局变量 <code>number</code> 进行 1000 次递加操作。为了模拟真实的高并发冲突，在“读-改-写”过程中人为加入微秒级延时。</p>
+        <pre>
+// 人为制造数据混乱的代码段
+int count = number;
+count++;
+usleep(10); // 强制让出CPU，增大由于上下文切换导致的数据覆盖概率
+number = count;</pre>
+        <p><strong>预期结果：</strong> 2000<br>
+        <strong>实际结果：</strong> 1985 (示例)<br>
+        <strong>原因分析：</strong> 发生了竞态条件。当线程 A 读取 number 为 50 并准备加 1 时，进入 usleep 挂起；此时线程 B 介入，也读取 number 为 50，加 1 后写入 51。当线程 A 醒来，它使用的是旧的上下文，也将 51 写入 number。即使两个线程各加了一次，实际上 number 只增加了 1。</p>
+
+        <hr>
+
+        <h3>2.4 互斥锁（Mutex）的应用</h3>
+        <p><strong>步骤：</strong>编写程序 <code>task4_mutex.c</code>，在步骤 2.3 的基础上加入 <code>pthread_mutex_t</code>。在对共享变量 number 进行操作前调用 <code>pthread_mutex_lock</code>，操作结束后调用 <code>pthread_mutex_unlock</code>。</p>
+        <p><strong>结果：</strong> 2000<br>
+        <strong>原因分析：</strong> 加入互斥锁后，number 的“读取-增加-写入”过程构成了临界区（Critical Section）。当线程 A 获得锁进入临界区时，线程 B 若尝试加锁会被阻塞（Block），直到线程 A 释放锁。这保证了操作的原子性，确保了数据的正确性。</p>
+        <img src="web/Weixin Image_20251229203714.png" alt="多线程实验文件结构截图" width="600px" />
+    </section>
+
+    <section id="section3">
+        <h2>三、 实验总结 (Linux多线程)</h2>
+        <p>本次实验从简单的线程创建入手，直观地展示了多线程并发执行的特点。通过人为制造竞态条件，深刻体会了无保护的多线程数据共享可能带来的灾难性后果（数据丢失）。最后通过引入互斥锁，成功解决了数据竞争问题。对比（3）和（4）的结果，验证了同步机制在多线程编程中的必要性。</p>
+    </section>
+
+    <section id="section4">
+        <h2>四、 实验目的 (实时图像处理)</h2>
+        <ul>
+            <li><strong>系统构建：</strong>综合运用 OpenCV 和多线程技术，构建高效的实时图像处理系统。</li>
+            <li><strong>性能优化：</strong>解决单线程模型中因算法推理耗时导致的视频卡顿问题。</li>
+            <li><strong>高级同步：</strong>掌握生产者-消费者模型及读写锁（Read-Write Lock）在嵌入式图像处理中的应用。</li>
+        </ul>
+    </section>
+
+    <section id="section5">
+        <h2>五、 实验原理与设计思路</h2>
+        <p>在之前的实验中，视频采集、算法推理、图像显示是串行执行的。由于深度学习算法（SNPE/DSP推理）耗时较长（约400ms/帧），导致视频显示帧率极低，出现严重的“幻灯片”效应。</p>
+        <h3>改进方案</h3>
+        <ul>
+            <li><strong>采集线程 (Consumer & UI)：</strong>负责高频读取摄像头画面，更新全局图像缓冲区，并读取最新的检测结果进行绘制显示。保证视频流的流畅性。</li>
+            <li><strong>算法线程 (Processor)：</strong>负责从全局缓冲区获取最新图像，执行耗时的 <code>doDetect</code> 操作，并更新全局结果。</li>
+            <li><strong>同步机制：</strong>使用 <code>pthread_rwlock_t</code>（读写锁）。因为读取操作（显示、算法取图）发生频繁，而写入操作相对较少，读写锁比互斥锁效率更高。</li>
+        </ul>
+    </section>
+
+    <section id="section6">
+        <h2>六、 关键代码实现</h2>
+        <pre>
+// 1. 全局共享资源
+Mat g_frame;                  // 最新图像
+std::vector&lt;int&gt; g_result;    // 最新检测结果
+pthread_rwlock_t img_lock;    // 图像读写锁
+pthread_rwlock_t res_lock;    // 结果读写锁
+
+// 2. 采集与显示线程 (Consumer & UI)
+void* thread_loop_camera(void* arg) {
+    while (g_isRunning) {
+        cap.read(frame_local);
+
+        // 【写操作】更新全局图像，需加写锁
+        pthread_rwlock_wrlock(&img_lock);
+        g_frame = frame_local.clone(); // 深拷贝，防止并发读写冲突
+        pthread_rwlock_unlock(&img_lock);
+
+        // 【读操作】获取最新结果，只需读锁，非阻塞
+        pthread_rwlock_rdlock(&res_lock);
+        if (!g_result.empty()) result_local = g_result;
+        pthread_rwlock_unlock(&res_lock);
+
+        // 绘制并显示
+        draw_result(frame_local, result_local);
+        imshow("Object Detection Live", frame_local); // 保持高FPS刷新
+    }
+}
+
+// 3. 算法处理线程 (Processor)
+void* thread_loop_doDetect(void* arg) {
+    while (g_isRunning) {
+        // 【读操作】获取待处理图像
+        pthread_rwlock_rdlock(&img_lock);
+        if (!g_frame.empty()) frame_to_process = g_frame.clone();
+        pthread_rwlock_unlock(&img_lock);
+
+        // 执行耗时算法 (此时不持有锁，不影响UI线程)
+        std::vector&lt;int&gt; current_result = detector->doDetect(frame_to_process);
+
+        // 【写操作】更新全局结果
+        pthread_rwlock_wrlock(&res_lock);
+        g_result = current_result;
+        pthread_rwlock_unlock(&res_lock);
+    }
+}</pre>
+    </section>
+
+    <section id="section7">
+        <h2>七、 实验结果与分析</h2>
+
+        <h3>7.1 编译与运行</h3>
+        <p>在 EB2 开发板上使用 g++ 编译代码，需链接 pthread 和 OpenCV 库：</p>
+        <pre>g++ main.cpp -o task_eb2 -lpthread -lopencv_core ...</pre>
+
+        <h3>7.2 实时运行效果</h3>
+        <p>运行程序后，摄像头画面流畅度显著提升。虽然检测框的更新频率仍然受限于算法速度（约 2-3 fps），但背景画面的刷新率不再受阻，达到了摄像头本身的帧率（约 24 fps），解决了“卡顿”问题。</p>
+        <img src="web/Weixin Image_20251229203725.jpg" alt="实时图像处理实验运行场景" width="600px" />
+
+        <h3>7.3 实验视频</h3>
+        <div style="text-align: center; margin-top: 30px;">
+            <video width="600" controls>
+                <source src="web/84992f0761feef026f905f371adbe2a5.webm" type="video/webm">
+                您的浏览器不支持播放该视频。
+            </video>
+        </div>
+
+        <h3>7.4 遇到的问题与解决</h3>
+        <p><strong>问题：</strong> 运行时偶尔出现 Segmentation Fault。<br>
+        <strong>解决：</strong> 发现是在读写全局 <code>Mat</code> 对象时没有使用深拷贝（<code>.clone()</code>）。OpenCV 的 Mat 默认是浅拷贝，多线程同时操作同一块内存导致崩溃。在加锁区域内使用 clone() 复制数据后解决。</p>
+    </section>
+
+    <section id="section8">
+        <h2>八、 实验总结 (实时图像处理)</h2>
+        <p>本次实验成功将单线程的图像处理程序重构为多线程并发模型。通过分离“数据获取/显示”与“数据处理”两个任务，利用读写锁保护共享资源，在保证数据安全的前提下，极大提升了系统的实时响应能力。这种“异步处理”的思想在嵌入式 AI 应用开发中具有重要的实践意义。</p>
+    </section>
+
+    <footer>
+        <p>&copy; 2023308130407 实验报告</p>
+    </footer>
+
+</body>
+</html>
